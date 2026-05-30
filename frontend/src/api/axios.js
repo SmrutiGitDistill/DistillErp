@@ -5,7 +5,8 @@ const apiBaseURL = (import.meta.env.VITE_API_URL?.trim() || '').replace(/\/$/, '
 const api = axios.create({
   baseURL: apiBaseURL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  // 60 s — accommodates Render free-tier cold starts (service sleeps after 15 min idle)
+  timeout: 60000,
 })
 
 api.interceptors.request.use((config) => {
@@ -16,24 +17,13 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const original = error.config || {}
-
-    if (error.response?.status === 401 && !original._retry) {
-      original._retry = true
+  (error) => {
+    if (error.response?.status === 401 && !error.config?._retry) {
+      error.config._retry = true
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
-      return Promise.reject(error)
     }
-
-    if (error.response?.status === 429) {
-      return Promise.reject({
-        ...error,
-        message: error.response.data?.detail || 'Too many attempts. Please wait.',
-      })
-    }
-
     return Promise.reject(error)
   },
 )

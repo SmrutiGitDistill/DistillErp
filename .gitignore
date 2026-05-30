@@ -45,7 +45,6 @@ Thumbs.db
 # Node / Frontend build artefacts
 node_modules/
 frontend/dist/
-frontend/.env
 frontend/.env.local
 
 # Render / CI
