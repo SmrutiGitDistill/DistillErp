@@ -62,12 +62,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — origins come from ALLOWED_ORIGINS env var + auto-injected RENDER_EXTERNAL_URL
+# CORS — allow all origins.
+# This app uses JWT in the Authorization header (not cookies), so allow_origins=["*"]
+# is safe: browsers will never auto-attach session data from other sites.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.origins_list,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],
 )
