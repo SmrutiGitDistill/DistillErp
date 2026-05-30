@@ -62,13 +62,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Security middleware
+# CORS — origins come from ALLOWED_ORIGINS env var + auto-injected RENDER_EXTERNAL_URL
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.origins_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 # Global error handler
