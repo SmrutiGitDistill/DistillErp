@@ -31,8 +31,32 @@ body {
   border-radius: 3px;
 }
 
-html, body , #root {
-    height : 100%;
-    width: 100%;
-    overflow : hidden;
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Prevent tables from causing horizontal page overflow */
+table {
+  min-width: 0;
+}
+
+/* Responsive page containers used across all pages */
+@media (max-width: 767px) {
+  /* Tighten card padding on mobile */
+  .card-mobile {
+    padding: 14px !important;
+  }
+
+  /* Tab buttons wrap cleanly on small screens */
+  .tab-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* Smooth focus ring for inputs */
+input:focus, select:focus, textarea:focus {
+  border-color: #C8760A !important;
+  box-shadow: 0 0 0 2px rgba(200, 118, 10, 0.15);
 }

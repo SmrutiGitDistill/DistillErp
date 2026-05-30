@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Factory, Package, ShoppingCart,
   Receipt, BarChart3, BookOpen, Settings, LogOut, Menu, X
 } from 'lucide-react'
+
+const SIDEBAR_W = 224
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -20,11 +22,25 @@ const navItems = [
 export default function Layout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const getIsDesktop = () => window.innerWidth >= 768
+  const [isDesktop, setIsDesktop] = useState(getIsDesktop)
+  const [sidebarOpen, setSidebarOpen] = useState(getIsDesktop)
 
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
   })
+
+  useEffect(() => {
+    const onResize = () => {
+      const desktop = getIsDesktop()
+      setIsDesktop(desktop)
+      // Auto-open on desktop, auto-close on mobile when resizing
+      setSidebarOpen(desktop)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -32,10 +48,7 @@ export default function Layout({ children }) {
   }
 
   const handleNavClick = () => {
-    // Close sidebar on mobile after clicking a link
-    if (window.innerWidth < 768) {
-      setSidebarOpen(false)
-    }
+    if (!isDesktop) setSidebarOpen(false)
   }
 
   const roleColor = (role) => {
@@ -44,19 +57,19 @@ export default function Layout({ children }) {
     return { bg: '#E0F2FE', color: '#0369A1' }
   }
 
+  const mobileOverlay = !isDesktop && sidebarOpen
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' }}>
 
-      {/* Overlay for mobile — clicking outside closes sidebar */}
-      {sidebarOpen && (
+      {/* Mobile overlay */}
+      {mobileOverlay && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            position: 'fixed', inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.45)',
             zIndex: 40,
-            display: 'block'
           }}
         />
       )}
@@ -65,46 +78,51 @@ export default function Layout({ children }) {
       <aside style={{
         position: 'fixed',
         top: 0,
-        left: sidebarOpen ? 0 : '-224px',
-        width: '224px',
+        left: sidebarOpen ? 0 : `-${SIDEBAR_W}px`,
+        width: `${SIDEBAR_W}px`,
         height: '100vh',
         backgroundColor: '#1C1917',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 50,
-        transition: 'left 0.3s ease',
-        boxShadow: sidebarOpen ? '4px 0 20px rgba(0,0,0,0.3)' : 'none'
+        transition: 'left 0.25s ease',
+        boxShadow: mobileOverlay ? '4px 0 24px rgba(0,0,0,0.35)' : 'none',
       }}>
 
-        {/* Brand + Close button */}
+        {/* Brand header */}
         <div style={{
           padding: '16px',
-          borderBottom: '1px solid #44403C',
+          borderBottom: '1px solid #292524',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          gap: '8px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '24px' }}>🏭</span>
-            <div>
-              <p style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>DistillERP</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <span style={{ fontSize: '22px', flexShrink: 0 }}>🏭</span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ color: 'white', fontWeight: '700', fontSize: '14px', lineHeight: 1.2 }}>DistillERP</p>
               <p style={{ color: '#A8A29E', fontSize: '11px' }}>Factory System</p>
             </div>
           </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            style={{
-              background: 'none', border: 'none',
-              color: '#A8A29E', cursor: 'pointer',
-              padding: '4px', borderRadius: '6px'
-            }}
-          >
-            <X size={18} />
-          </button>
+          {/* Only show close button on mobile */}
+          {!isDesktop && (
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                background: 'none', border: 'none',
+                color: '#A8A29E', cursor: 'pointer',
+                padding: '4px', borderRadius: '6px',
+                flexShrink: 0, lineHeight: 0,
+              }}
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
+        {/* Navigation */}
+        <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -116,13 +134,13 @@ export default function Layout({ children }) {
                 gap: '10px',
                 padding: '10px 12px',
                 borderRadius: '8px',
-                marginBottom: '4px',
+                marginBottom: '2px',
                 fontSize: '13px',
                 fontWeight: '500',
                 textDecoration: 'none',
                 backgroundColor: isActive ? '#C8760A' : 'transparent',
                 color: isActive ? 'white' : '#A8A29E',
-                transition: 'all 0.15s ease'
+                transition: 'background-color 0.15s, color 0.15s',
               })}
             >
               <Icon size={17} />
@@ -131,19 +149,19 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        {/* User & Logout */}
-        <div style={{ borderTop: '1px solid #44403C', padding: '12px' }}>
-          <div style={{ padding: '8px', marginBottom: '4px' }}>
-            <p style={{ color: 'white', fontSize: '12px', fontWeight: '600' }}>
+        {/* User info + logout */}
+        <div style={{ borderTop: '1px solid #292524', padding: '12px' }}>
+          <div style={{ padding: '6px 8px 10px' }}>
+            <p style={{ color: 'white', fontSize: '12px', fontWeight: '600', lineHeight: 1.3 }}>
               {user?.full_name}
             </p>
-            <p style={{ color: '#A8A29E', fontSize: '11px' }}>{user?.email}</p>
+            <p style={{ color: '#A8A29E', fontSize: '11px', marginTop: '1px' }}>{user?.email}</p>
             <span style={{
               display: 'inline-block', marginTop: '6px',
               padding: '2px 10px', borderRadius: '999px',
               fontSize: '10px', fontWeight: '600',
               backgroundColor: roleColor(user?.role).bg,
-              color: roleColor(user?.role).color
+              color: roleColor(user?.role).color,
             }}>
               {user?.role}
             </span>
@@ -156,7 +174,7 @@ export default function Layout({ children }) {
               color: '#A8A29E', background: 'none',
               border: 'none', cursor: 'pointer',
               fontSize: '13px', width: '100%',
-              fontFamily: 'inherit', transition: 'all 0.15s ease'
+              fontFamily: 'inherit', transition: 'background-color 0.15s, color 0.15s',
             }}
             onMouseOver={e => {
               e.currentTarget.style.backgroundColor = '#7F1D1D'
@@ -173,68 +191,73 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main column — shifts right to make room for the persistent sidebar on desktop */}
       <div style={{
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        width: '100%'
+        minWidth: 0,
+        marginLeft: isDesktop && sidebarOpen ? `${SIDEBAR_W}px` : 0,
+        transition: 'margin-left 0.25s ease',
       }}>
 
-        {/* Topbar */}
+        {/* Top bar */}
         <header style={{
           backgroundColor: 'white',
           borderBottom: '1px solid #E7E5E4',
-          padding: '12px 16px',
+          padding: '0 16px',
+          height: '52px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexShrink: 0,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          gap: '12px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
-            {/* Hamburger menu — always visible */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+            {/* Hamburger — opens sidebar on mobile, toggles on desktop */}
             <button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setSidebarOpen(o => !o)}
               style={{
                 background: 'none', border: 'none',
                 cursor: 'pointer', padding: '6px',
                 borderRadius: '8px', color: '#44403C',
                 display: 'flex', alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center', flexShrink: 0,
               }}
               onMouseOver={e => e.currentTarget.style.backgroundColor = '#F5F5F4'}
               onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              <Menu size={22} />
+              <Menu size={20} />
             </button>
 
-            <div>
-              <p style={{ fontSize: '14px', fontWeight: '700', color: '#1C1917' }}>DistillERP</p>
-              <p style={{ fontSize: '11px', color: '#A8A29E' }}>{today}</p>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: '14px', fontWeight: '700', color: '#1C1917', lineHeight: 1.2 }}>DistillERP</p>
+              <p style={{ fontSize: '11px', color: '#A8A29E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {today}
+              </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              backgroundColor: roleColor(user?.role).bg,
-              color: roleColor(user?.role).color,
-              fontSize: '11px', fontWeight: '600',
-              padding: '4px 12px', borderRadius: '999px'
-            }}>
-              {user?.role === 'superadmin' ? '👑' : '👤'} {user?.full_name}
-            </span>
-          </div>
+          <span style={{
+            backgroundColor: roleColor(user?.role).bg,
+            color: roleColor(user?.role).color,
+            fontSize: '11px', fontWeight: '600',
+            padding: '4px 12px', borderRadius: '999px',
+            whiteSpace: 'nowrap', flexShrink: 0,
+          }}>
+            {user?.role === 'superadmin' ? '👑' : '👤'} {user?.full_name}
+          </span>
         </header>
 
         {/* Page content */}
         <main style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '16px',
-          backgroundColor: '#F8F7F4'
+          overflowX: 'hidden',
+          padding: isDesktop ? '24px' : '12px',
+          backgroundColor: '#F8F7F4',
         }}>
           {children}
         </main>

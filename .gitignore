@@ -1,39 +1,52 @@
-# Environment and secrets
-.env
-.env.*
-!.env.example
-!**/.env.example
-
 # Python
 __pycache__/
 *.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
 venv/
 .venv/
-backend/venv/
+env/
+.env/
 
-# Node
-node_modules/
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
+# Environment / secrets
+.env
+.env.local
+.env.*.local
 
-# App data
-backend/backups/
-backend/data/
+# Database files
+*.db
 *.sqlite
 *.sqlite3
 
-# Editors and OS files
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
+# Backups
+backups/
+*.backup
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node / Frontend build artefacts
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Render / CI
+.render-build-log

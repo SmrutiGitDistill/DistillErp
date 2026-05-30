@@ -25,12 +25,12 @@ def get_daily_summary(
         func.date(Sales.date) == entry_date
     ).first()
 
-    expense = db.query(Expense).filter(
+    expenses = db.query(Expense).filter(
         func.date(Expense.date) == entry_date
-    ).first()
+    ).all()
 
     total_sales = sales.total_sales if sales else 0
-    total_expenses = expense.total if expense else 0
+    total_expenses = sum(e.amount for e in expenses)
     net_profit = total_sales - total_expenses
 
     # Inventory calculation
@@ -62,7 +62,7 @@ def get_daily_summary(
             "total_sales": total_sales,
         },
         "expenses": {
-            "entered": expense is not None,
+            "entered": len(expenses) > 0,
             "total_expenses": total_expenses,
         },
         "inventory": {
@@ -94,7 +94,7 @@ def get_weekly_stats(
 
     expense_data = db.query(
         func.date(Expense.date).label("date"),
-        func.sum(Expense.total).label("total_expenses")
+        func.sum(Expense.amount).label("total_expenses")
     ).filter(
         Expense.date >= seven_days_ago
     ).group_by(func.date(Expense.date)).all()

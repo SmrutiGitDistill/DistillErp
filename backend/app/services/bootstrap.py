@@ -3,6 +3,14 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import hash_password
 from app.models.user import User
+from app.models.settings import Settings
+
+
+def ensure_initial_settings(db: Session) -> None:
+    if not db.query(Settings).first():
+        db.add(Settings())
+        db.commit()
+        print("Default settings row created.", flush=True)
 
 
 def ensure_initial_superadmin(db: Session) -> None:

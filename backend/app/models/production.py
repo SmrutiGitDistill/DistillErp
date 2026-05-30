@@ -15,11 +15,30 @@ class Production(Base):
     mahua = Column(Float, default=0)
     sugar = Column(Float, default=0)
     molasses = Column(Float, default=0)
+    grains = Column(Float, default=0)
+    yeast = Column(Float, default=0)
+    water = Column(Float, default=0)
 
-    # Output (litres)
-    open_produced = Column(Float, default=0)
-    pkg_produced = Column(Float, default=0)
-    opening_stock = Column(Float, default=0)
+    # Fermentation
+    wash_volume = Column(Float, default=0)        # litres
+    fermentation_hours = Column(Float, default=0) # hours
+    wash_abv = Column(Float, default=0)           # % ABV of wash
+
+    # Distillation output
+    open_produced = Column(Float, default=0)      # litres
+    pkg_produced = Column(Float, default=0)       # bottles
+    opening_stock = Column(Float, default=0)      # litres
+
+    # Quality
+    spirit_abv = Column(Float, default=0)         # % ABV of spirit
+    low_wine_volume = Column(Float, default=0)    # litres
+
+    # Wastage
+    wastage_litres = Column(Float, default=0)
+    wastage_reason = Column(String, nullable=True)
+
+    # Yield
+    yield_percentage = Column(Float, default=0)   # auto calculated
 
     notes = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"))

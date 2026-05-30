@@ -5,9 +5,16 @@ services:
     plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: python render_start.py && uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
+    startCommand: >-
+      python render_start.py &&
+      gunicorn main:app
+      --workers 1
+      --worker-class uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:$PORT
+      --timeout 120
+      --log-level info
     healthCheckPath: /health
-    autoDeployTrigger: commit
+    autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
@@ -20,15 +27,15 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: ALLOWED_ORIGINS
-        value: https://distillerp.vercel.app,http://localhost:5173,http://127.0.0.1:5173
+        value: http://localhost:5173,http://127.0.0.1:5173
       - key: BACKUP_PATH
         value: /tmp/distillerp-backups
       - key: INITIAL_SUPERADMIN_EMAIL
-        value: superadmin@distillerp.com
+        sync: false
       - key: INITIAL_SUPERADMIN_PASSWORD
         sync: false
       - key: INITIAL_SUPERADMIN_NAME
-        value: Test Super Admin
+        value: Super Admin
 
 databases:
   - name: distillerp-db

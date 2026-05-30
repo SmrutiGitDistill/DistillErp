@@ -54,7 +54,7 @@ export default function Dashboard() {
       {/* Entry Status */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-stone-100">
         <h2 className="text-sm font-semibold text-stone-600 mb-3">Today's Entry Status</h2>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           {[
             { label: 'Production', entered: production.entered },
             { label: 'Sales', entered: sales.entered },

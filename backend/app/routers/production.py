@@ -7,6 +7,7 @@ from app.core.deps import get_current_user
 from app.models.user import User
 from app.schemas.production import ProductionCreate, ProductionUpdate, ProductionOut
 from app.services import production as production_service
+from app.services.audit import log_action
 
 router = APIRouter(prefix="/production", tags=["Production"])
 
@@ -22,7 +23,9 @@ def create(
             status_code=400,
             detail=f"Production entry already exists for {data.date}. Use PUT to update."
         )
-    return production_service.create_production(db, data, current_user.id)
+    result = production_service.create_production(db, data, current_user.id)
+    log_action(db, current_user, "CREATE", "production", result.id, f"Batch {result.batch_number}")
+    return result
 
 @router.get("/", response_model=List[ProductionOut])
 def get_all(
@@ -60,6 +63,7 @@ def update(
             status_code=404,
             detail=f"No production entry found for {entry_date}"
         )
+    log_action(db, current_user, "UPDATE", "production", production.id, f"Batch {production.batch_number}")
     return production
 
 @router.delete("/{entry_date}")
@@ -71,4 +75,5 @@ def delete(
     success = production_service.delete_production(db, entry_date)
     if not success:
         raise HTTPException(status_code=404, detail="Entry not found")
+    log_action(db, current_user, "DELETE", "production", str(entry_date), f"Date {entry_date}")
     return {"message": "Production entry deleted successfully"}

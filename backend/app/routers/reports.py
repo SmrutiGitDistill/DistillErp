@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import date
-from typing import List
+from collections import defaultdict
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
@@ -34,26 +34,23 @@ def get_range_report(
         Expense.date <= to_date
     ).order_by(Expense.date).all()
 
-    # Build day by day report
-    all_dates = set()
-    for p in productions:
-        all_dates.add(p.date)
-    for s in sales:
-        all_dates.add(s.date)
+    # Group expenses by date (multiple expenses per day are valid)
+    expense_by_date = defaultdict(list)
     for e in expenses:
-        all_dates.add(e.date)
+        expense_by_date[e.date].append(e)
 
     sales_map = {s.date: s for s in sales}
-    expense_map = {e.date: e for e in expenses}
     production_map = {p.date: p for p in productions}
+
+    all_dates = set(production_map) | set(sales_map) | set(expense_by_date)
 
     daily = []
     for d in sorted(all_dates):
         s = sales_map.get(d)
-        e = expense_map.get(d)
+        day_expenses = expense_by_date.get(d, [])
         p = production_map.get(d)
         total_sales = s.total_sales if s else 0
-        total_expenses = e.total if e else 0
+        total_expenses = sum(e.amount for e in day_expenses)
         daily.append({
             "date": str(d),
             "batch": p.batch_number if p else None,
@@ -64,20 +61,16 @@ def get_range_report(
             "is_profit": (total_sales - total_expenses) >= 0,
         })
 
-    # Summary
     total_sales = sum(s.total_sales for s in sales)
-    total_expenses = sum(e.total for e in expenses)
+    total_expenses = sum(e.amount for e in expenses)
     total_open = sum(p.open_produced for p in productions)
     total_pkg = sum(p.pkg_produced for p in productions)
 
-    # Expense breakdown
-    expense_breakdown = {
-        "salary": sum(e.salary for e in expenses),
-        "diesel": sum(e.diesel for e in expenses),
-        "petrol": sum(e.petrol for e in expenses),
-        "meals": sum(e.meals for e in expenses),
-        "others": sum(e.others for e in expenses),
-    }
+    # Expense breakdown by category (dynamic — matches Expense.category field values)
+    category_totals = defaultdict(float)
+    for e in expenses:
+        category_totals[e.category] += e.amount
+    expense_breakdown = dict(category_totals)
 
     return {
         "period": {

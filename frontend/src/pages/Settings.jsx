@@ -7,6 +7,7 @@ const apiBaseURL = (import.meta.env.VITE_API_URL?.trim() || '').replace(/\/$/, '
 export default function Settings() {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'superadmin'
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || isSuperAdmin
 
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -23,12 +24,30 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState('')
   const [pwMessage, setPwMessage] = useState(null)
 
+  // Company settings state
+  const [companySettings, setCompanySettings] = useState(null)
+  const [editingCompany, setEditingCompany] = useState(false)
+  const [companyForm, setCompanyForm] = useState({})
+  const [companyMessage, setCompanyMessage] = useState(null)
+  const [companyLoading, setCompanyLoading] = useState(false)
+
   useEffect(() => {
+    loadCompanySettings()
     if (isSuperAdmin) {
       loadUsers()
       loadBackups()
     }
   }, [isSuperAdmin])
+
+  const loadCompanySettings = async () => {
+    try {
+      const res = await api.get('/settings/')
+      setCompanySettings(res.data)
+      setCompanyForm(res.data)
+    } catch {
+      setCompanySettings(null)
+    }
+  }
 
   const loadUsers = async () => {
     setUsersLoading(true)
@@ -47,6 +66,21 @@ export default function Settings() {
       setBackups(res.data)
     } catch {
       setBackups([])
+    }
+  }
+
+  const saveCompanySettings = async () => {
+    setCompanyLoading(true)
+    try {
+      const res = await api.put('/settings/', companyForm)
+      setCompanySettings(res.data)
+      setCompanyForm(res.data)
+      setEditingCompany(false)
+      setCompanyMessage({ type: 'success', text: 'Company settings saved successfully.' })
+    } catch {
+      setCompanyMessage({ type: 'error', text: 'Failed to save settings.' })
+    } finally {
+      setCompanyLoading(false)
     }
   }
 
@@ -113,7 +147,7 @@ export default function Settings() {
   const inputStyle = {
     border: '1px solid #E7E5E4', borderRadius: '8px',
     padding: '8px 12px', fontSize: '13px',
-    outline: 'none', fontFamily: 'inherit'
+    outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box'
   }
 
   const roleColor = (role) => {
@@ -134,6 +168,13 @@ export default function Settings() {
     </div>
   ) : null
 
+  const Field = ({ label, value }) => (
+    <div>
+      <p style={{ fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>{label}</p>
+      <p style={{ fontWeight: '500', color: '#1C1917', fontSize: '13px' }}>{value || '—'}</p>
+    </div>
+  )
+
   return (
     <div style={{ maxWidth: '900px' }}>
 
@@ -151,14 +192,8 @@ export default function Settings() {
           Your Account
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-          <div>
-            <p style={{ fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Full Name</p>
-            <p style={{ fontWeight: '600', color: '#1C1917' }}>{user?.full_name}</p>
-          </div>
-          <div>
-            <p style={{ fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Email</p>
-            <p style={{ fontWeight: '600', color: '#1C1917' }}>{user?.email}</p>
-          </div>
+          <Field label="Full Name" value={user?.full_name} />
+          <Field label="Email" value={user?.email} />
           <div>
             <p style={{ fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Role</p>
             <span style={{
@@ -174,11 +209,166 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Company Profile */}
+      <div style={cardStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '13px', fontWeight: '600', color: '#44403C' }}>
+            Company Profile
+          </h2>
+          {isAdmin && !editingCompany && (
+            <button
+              onClick={() => { setEditingCompany(true); setCompanyMessage(null) }}
+              style={{
+                backgroundColor: '#F5F5F4', color: '#44403C',
+                border: 'none', borderRadius: '8px',
+                padding: '6px 14px', fontSize: '12px',
+                fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit'
+              }}
+            >
+              Edit
+            </button>
+          )}
+        </div>
+
+        <MessageBox msg={companyMessage} />
+
+        {!companySettings ? (
+          <p style={{ color: '#78716C', fontSize: '13px' }}>Loading...</p>
+        ) : editingCompany ? (
+          <div>
+            <p style={{ fontSize: '12px', fontWeight: '600', color: '#44403C', marginBottom: '12px' }}>
+              General Info
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+              {[
+                { key: 'company_name', label: 'Company Name' },
+                { key: 'location', label: 'Location' },
+                { key: 'excise_licence', label: 'Excise Licence No.' },
+                { key: 'gst_number', label: 'GST Number' },
+                { key: 'phone', label: 'Phone' },
+                { key: 'email', label: 'Email' },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>{label}</label>
+                  <input
+                    value={companyForm[key] || ''}
+                    onChange={e => setCompanyForm(f => ({ ...f, [key]: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+              ))}
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Default Shift</label>
+                <select
+                  value={companyForm.default_shift || 'Morning'}
+                  onChange={e => setCompanyForm(f => ({ ...f, default_shift: e.target.value }))}
+                  style={inputStyle}
+                >
+                  <option>Morning</option>
+                  <option>Evening</option>
+                  <option>Night</option>
+                </select>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '12px', fontWeight: '600', color: '#44403C', marginBottom: '12px' }}>
+              Price Slabs — Packaged
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              {['p1', 'p2', 'p3'].map(k => (
+                <div key={k} style={{ padding: '12px', backgroundColor: '#F8F7F4', borderRadius: '8px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Label ({k.toUpperCase()})</label>
+                    <input value={companyForm[`label_${k}`] || ''} onChange={e => setCompanyForm(f => ({ ...f, [`label_${k}`]: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Rate (₹/bottle)</label>
+                    <input type="number" value={companyForm[`rate_${k}`] || ''} onChange={e => setCompanyForm(f => ({ ...f, [`rate_${k}`]: parseFloat(e.target.value) || 0 }))} style={inputStyle} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ fontSize: '12px', fontWeight: '600', color: '#44403C', marginBottom: '12px' }}>
+              Price Tiers — Open Liquor
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              {['o1', 'o2', 'o3'].map(k => (
+                <div key={k} style={{ padding: '12px', backgroundColor: '#F8F7F4', borderRadius: '8px' }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Label ({k.toUpperCase()})</label>
+                    <input value={companyForm[`label_${k}`] || ''} onChange={e => setCompanyForm(f => ({ ...f, [`label_${k}`]: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Rate (₹/unit)</label>
+                    <input type="number" value={companyForm[`rate_${k}`] || ''} onChange={e => setCompanyForm(f => ({ ...f, [`rate_${k}`]: parseFloat(e.target.value) || 0 }))} style={inputStyle} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={saveCompanySettings}
+                disabled={companyLoading}
+                style={{
+                  backgroundColor: companyLoading ? '#D6D3D1' : '#C8760A', color: 'white',
+                  border: 'none', borderRadius: '8px',
+                  padding: '10px 20px', fontSize: '13px',
+                  fontWeight: '600', cursor: companyLoading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                {companyLoading ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => { setEditingCompany(false); setCompanyForm(companySettings); setCompanyMessage(null) }}
+                style={{
+                  backgroundColor: '#F5F5F4', color: '#78716C',
+                  border: 'none', borderRadius: '8px',
+                  padding: '10px 20px', fontSize: '13px',
+                  fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+              <Field label="Company Name" value={companySettings.company_name} />
+              <Field label="Location" value={companySettings.location} />
+              <Field label="Excise Licence" value={companySettings.excise_licence} />
+              <Field label="GST Number" value={companySettings.gst_number} />
+              <Field label="Phone" value={companySettings.phone} />
+              <Field label="Email" value={companySettings.email} />
+              <Field label="Default Shift" value={companySettings.default_shift} />
+            </div>
+            <p style={{ fontSize: '12px', fontWeight: '600', color: '#44403C', marginBottom: '8px' }}>Price Slabs</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
+              {['p1', 'p2', 'p3'].map(k => (
+                <div key={k} style={{ padding: '8px 12px', backgroundColor: '#F0FDF4', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '11px', color: '#78716C' }}>{companySettings[`label_${k}`]} (Pkg)</p>
+                  <p style={{ fontWeight: '600', color: '#15803D', fontSize: '13px' }}>₹{companySettings[`rate_${k}`]}/bottle</p>
+                </div>
+              ))}
+              {['o1', 'o2', 'o3'].map(k => (
+                <div key={k} style={{ padding: '8px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '11px', color: '#78716C' }}>{companySettings[`label_${k}`]} (Open)</p>
+                  <p style={{ fontWeight: '600', color: '#2563EB', fontSize: '13px' }}>₹{companySettings[`rate_${k}`]}/unit</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* User Management — Superadmin only */}
       {isSuperAdmin && (
         <div style={cardStyle}>
           <h2 style={{ fontSize: '13px', fontWeight: '600', color: '#44403C', marginBottom: '16px' }}>
-            👑 User Management
+            User Management
           </h2>
 
           <MessageBox msg={message} />
@@ -266,14 +456,13 @@ export default function Settings() {
                                     fontFamily: 'inherit'
                                   }}
                                 >
-                                  🔑 Password
+                                  Password
                                 </button>
                               </>
                             )}
                           </div>
                         </td>
                       </tr>
-                      {/* Password change row */}
                       {changingPassword === u.id && (
                         <tr key={`pw-${u.id}`} style={{ backgroundColor: '#F8F7F4' }}>
                           <td colSpan={6} style={{ padding: '12px 8px' }}>
@@ -326,12 +515,11 @@ export default function Settings() {
       {isSuperAdmin && (
         <div style={cardStyle}>
           <h2 style={{ fontSize: '13px', fontWeight: '600', color: '#44403C', marginBottom: '16px' }}>
-            💾 Backup Management
+            Backup Management
           </h2>
 
           <MessageBox msg={backupMessage} />
 
-          {/* Manual Backup */}
           <div style={{ marginBottom: '24px' }}>
             <p style={{ fontSize: '12px', color: '#78716C', marginBottom: '8px' }}>
               Create an immediate backup of all data
@@ -348,71 +536,40 @@ export default function Settings() {
                 fontFamily: 'inherit'
               }}
             >
-              {backupLoading ? '⏳ Creating backup...' : '💾 Backup Now'}
+              {backupLoading ? 'Creating backup...' : 'Backup Now'}
             </button>
           </div>
 
-          {/* Schedule */}
           <div style={{
             padding: '16px', backgroundColor: '#F8F7F4',
             borderRadius: '10px', marginBottom: '20px'
           }}>
             <p style={{ fontSize: '12px', fontWeight: '600', color: '#44403C', marginBottom: '12px' }}>
-              🕐 Scheduled Automatic Backup
+              Scheduled Automatic Backup
             </p>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>
-                  Frequency
-                </label>
-                <select
-                  value={schedule.frequency}
-                  onChange={e => setSchedule(s => ({ ...s, frequency: e.target.value }))}
-                  style={inputStyle}
-                >
+                <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Frequency</label>
+                <select value={schedule.frequency} onChange={e => setSchedule(s => ({ ...s, frequency: e.target.value }))} style={{ ...inputStyle, width: 'auto' }}>
                   <option value="hourly">Every Hour</option>
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>
-                  Hour (0-23)
-                </label>
-                <input
-                  type="number" min="0" max="23"
-                  value={schedule.hour}
-                  onChange={e => setSchedule(s => ({ ...s, hour: parseInt(e.target.value) || 0 }))}
-                  style={{ ...inputStyle, width: '80px' }}
-                />
+                <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Hour (0-23)</label>
+                <input type="number" min="0" max="23" value={schedule.hour} onChange={e => setSchedule(s => ({ ...s, hour: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, width: '80px' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>
-                  Minute (0-59)
-                </label>
-                <input
-                  type="number" min="0" max="59"
-                  value={schedule.minute}
-                  onChange={e => setSchedule(s => ({ ...s, minute: parseInt(e.target.value) || 0 }))}
-                  style={{ ...inputStyle, width: '80px' }}
-                />
+                <label style={{ display: 'block', fontSize: '11px', color: '#78716C', marginBottom: '4px' }}>Minute (0-59)</label>
+                <input type="number" min="0" max="59" value={schedule.minute} onChange={e => setSchedule(s => ({ ...s, minute: parseInt(e.target.value) || 0 }))} style={{ ...inputStyle, width: '80px' }} />
               </div>
-              <button
-                onClick={saveSchedule}
-                style={{
-                  backgroundColor: '#C8760A', color: 'white',
-                  border: 'none', borderRadius: '8px',
-                  padding: '10px 20px', fontSize: '13px',
-                  fontWeight: '600', cursor: 'pointer',
-                  fontFamily: 'inherit'
-                }}
-              >
+              <button onClick={saveSchedule} style={{ backgroundColor: '#C8760A', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Save Schedule
               </button>
             </div>
           </div>
 
-          {/* Backup List */}
           {backups.length > 0 && (
             <div>
               <p style={{ fontSize: '12px', fontWeight: '600', color: '#44403C', marginBottom: '12px' }}>
@@ -423,35 +580,19 @@ export default function Settings() {
                   <thead>
                     <tr style={{ borderBottom: '2px solid #F5F5F4' }}>
                       {['File', 'Size', 'Created At', 'Download'].map(h => (
-                        <th key={h} style={{
-                          textAlign: 'left', padding: '8px',
-                          color: '#78716C', fontWeight: '600'
-                        }}>
-                          {h}
-                        </th>
+                        <th key={h} style={{ textAlign: 'left', padding: '8px', color: '#78716C', fontWeight: '600' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {backups.map(b => (
                       <tr key={b.filename} style={{ borderBottom: '1px solid #F5F5F4' }}>
-                        <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '12px', color: '#44403C' }}>
-                          {b.filename}
-                        </td>
+                        <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '12px', color: '#44403C' }}>{b.filename}</td>
                         <td style={{ padding: '8px', color: '#78716C' }}>{b.size_kb} KB</td>
-                        <td style={{ padding: '8px', color: '#78716C' }}>
-                          {new Date(b.created_at).toLocaleString('en-IN')}
-                        </td>
+                        <td style={{ padding: '8px', color: '#78716C' }}>{new Date(b.created_at).toLocaleString('en-IN')}</td>
                         <td style={{ padding: '8px' }}>
-                          <a
-                            href={`${apiBaseURL}/backup/download/${encodeURIComponent(b.filename)}`}
-                            style={{
-                              color: '#C8760A', fontWeight: '600',
-                              fontSize: '12px', textDecoration: 'none'
-                            }}
-                            download
-                          >
-                            ⬇️ Download
+                          <a href={`${apiBaseURL}/backup/download/${encodeURIComponent(b.filename)}`} style={{ color: '#C8760A', fontWeight: '600', fontSize: '12px', textDecoration: 'none' }} download>
+                            Download
                           </a>
                         </td>
                       </tr>
@@ -471,9 +612,10 @@ export default function Settings() {
       )}
 
       {/* Login Logs — Superadmin only */}
-      {isSuperAdmin && (
-        <LoginLogs />
-      )}
+      {isSuperAdmin && <LoginLogs />}
+
+      {/* Audit Log — Admin and above */}
+      {isAdmin && <AuditLogs />}
 
     </div>
   )
@@ -497,7 +639,7 @@ function LoginLogs() {
       border: '1px solid #F5F5F4', marginBottom: '16px'
     }}>
       <h2 style={{ fontSize: '13px', fontWeight: '600', color: '#44403C', marginBottom: '16px' }}>
-        🔐 Login Activity Log
+        Login Activity Log
       </h2>
       {loading ? (
         <div style={{ color: '#C8760A' }}>Loading logs...</div>
@@ -509,12 +651,7 @@ function LoginLogs() {
             <thead>
               <tr style={{ borderBottom: '2px solid #F5F5F4' }}>
                 {['Email', 'IP Address', 'Status', 'Reason', 'Time'].map(h => (
-                  <th key={h} style={{
-                    textAlign: 'left', padding: '8px',
-                    color: '#78716C', fontWeight: '600'
-                  }}>
-                    {h}
-                  </th>
+                  <th key={h} style={{ textAlign: 'left', padding: '8px', color: '#78716C', fontWeight: '600' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -522,25 +659,88 @@ function LoginLogs() {
               {logs.map(log => (
                 <tr key={log.id} style={{ borderBottom: '1px solid #F5F5F4' }}>
                   <td style={{ padding: '8px', fontWeight: '500' }}>{log.email}</td>
-                  <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '12px', color: '#78716C' }}>
-                    {log.ip_address}
-                  </td>
+                  <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '12px', color: '#78716C' }}>{log.ip_address}</td>
                   <td style={{ padding: '8px' }}>
                     <span style={{
-                      padding: '2px 10px', borderRadius: '999px',
-                      fontSize: '11px', fontWeight: '600',
+                      padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600',
                       backgroundColor: log.success ? '#F0FDF4' : '#FEF2F2',
                       color: log.success ? '#16A34A' : '#DC2626'
                     }}>
-                      {log.success ? '✅ Success' : '❌ Failed'}
+                      {log.success ? 'Success' : 'Failed'}
                     </span>
                   </td>
-                  <td style={{ padding: '8px', color: '#78716C', fontSize: '12px' }}>
-                    {log.reason || '—'}
+                  <td style={{ padding: '8px', color: '#78716C', fontSize: '12px' }}>{log.reason || '—'}</td>
+                  <td style={{ padding: '8px', color: '#78716C', fontSize: '12px' }}>{new Date(log.created_at).toLocaleString('en-IN')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AuditLogs() {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/audit/logs')
+      .then(res => setLogs(res.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const actionColor = (action) => {
+    if (action === 'CREATE') return { bg: '#F0FDF4', color: '#16A34A' }
+    if (action === 'UPDATE') return { bg: '#EFF6FF', color: '#2563EB' }
+    if (action === 'DELETE') return { bg: '#FEF2F2', color: '#DC2626' }
+    return { bg: '#F5F5F4', color: '#78716C' }
+  }
+
+  return (
+    <div style={{
+      backgroundColor: 'white', borderRadius: '12px',
+      padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      border: '1px solid #F5F5F4', marginBottom: '16px'
+    }}>
+      <h2 style={{ fontSize: '13px', fontWeight: '600', color: '#44403C', marginBottom: '16px' }}>
+        Audit Log
+      </h2>
+      {loading ? (
+        <div style={{ color: '#C8760A' }}>Loading audit log...</div>
+      ) : logs.length === 0 ? (
+        <p style={{ color: '#78716C', fontSize: '13px' }}>No audit entries yet.</p>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #F5F5F4' }}>
+                {['Time', 'User', 'Action', 'Entity', 'ID', 'Summary'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '8px', color: '#78716C', fontWeight: '600', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map(log => (
+                <tr key={log.id} style={{ borderBottom: '1px solid #F5F5F4' }}>
+                  <td style={{ padding: '8px', color: '#78716C', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                    {new Date(log.timestamp).toLocaleString('en-IN')}
                   </td>
-                  <td style={{ padding: '8px', color: '#78716C', fontSize: '12px' }}>
-                    {new Date(log.created_at).toLocaleString('en-IN')}
+                  <td style={{ padding: '8px', fontSize: '12px', color: '#44403C' }}>{log.user_email || '—'}</td>
+                  <td style={{ padding: '8px' }}>
+                    <span style={{
+                      padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600',
+                      backgroundColor: actionColor(log.action).bg,
+                      color: actionColor(log.action).color
+                    }}>
+                      {log.action}
+                    </span>
                   </td>
+                  <td style={{ padding: '8px', color: '#78716C', fontSize: '12px' }}>{log.entity_type}</td>
+                  <td style={{ padding: '8px', color: '#78716C', fontSize: '12px', fontFamily: 'monospace' }}>{log.entity_id || '—'}</td>
+                  <td style={{ padding: '8px', color: '#44403C', fontSize: '12px' }}>{log.summary || '—'}</td>
                 </tr>
               ))}
             </tbody>

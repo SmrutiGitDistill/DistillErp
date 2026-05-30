@@ -10,8 +10,8 @@ from app.core.config import settings
 from app.models import User, Production, Sales, Expense, Settings as SettingsModel
 from app.models.login_log import LoginLog
 from app.models.backup_schedule import BackupSchedule
-from app.routers import auth, production, sales, expenses, dashboard, reports, backup
-from app.services.bootstrap import ensure_initial_superadmin
+from app.routers import auth, production, sales, expenses, dashboard, reports, backup, inventory, settings as settings_router, audit
+from app.services.bootstrap import ensure_initial_superadmin, ensure_initial_settings
 from app.services.backup import run_scheduled_backups
 from app.core.database import SessionLocal
 
@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 FRONTEND_DIST_DIR = PROJECT_ROOT / "frontend" / "dist"
 FRONTEND_INDEX = FRONTEND_DIST_DIR / "index.html"
-API_ONLY_PREFIXES = {"auth", "backup", "health"}
+API_ONLY_PREFIXES = {"auth", "backup", "health", "settings", "audit"}
 API_PREFIXES_WITH_FRONTEND_ROUTES = {
     "dashboard",
     "expenses",
@@ -46,6 +46,7 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         ensure_initial_superadmin(db)
+        ensure_initial_settings(db)
     finally:
         db.close()
     asyncio.create_task(backup_scheduler())
@@ -86,6 +87,9 @@ app.include_router(expenses.router)
 app.include_router(dashboard.router)
 app.include_router(reports.router)
 app.include_router(backup.router)
+app.include_router(inventory.router)
+app.include_router(settings_router.router)
+app.include_router(audit.router)
 
 @app.get("/health")
 def health():
