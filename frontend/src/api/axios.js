@@ -2,16 +2,26 @@ import axios from 'axios'
 
 const apiBaseURL = (import.meta.env.VITE_API_URL?.trim() || '').replace(/\/$/, '')
 
+if (!apiBaseURL) {
+  console.error(
+    '[DistillERP] VITE_API_URL is not configured.\n' +
+    'Go to Vercel → Project → Settings → Environment Variables\n' +
+    'and add: VITE_API_URL = https://distillerp-0v1w.onrender.com\n' +
+    'Then redeploy.'
+  )
+}
+
 const api = axios.create({
   baseURL: apiBaseURL,
   headers: { 'Content-Type': 'application/json' },
-  // 60 s — accommodates Render free-tier cold starts (service sleeps after 15 min idle)
   timeout: 60000,
 })
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (token && token !== 'undefined') {
+    config.headers.Authorization = `Bearer ${token}`
+  }
   return config
 })
 
