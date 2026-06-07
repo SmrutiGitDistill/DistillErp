@@ -9,21 +9,40 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [waking, setWaking] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setWaking(false)
     setError('')
+
+    // Show "waking up" hint after 6 s if still loading (cold start scenario)
+    const wakeTimer = setTimeout(() => setWaking(true), 6000)
+
     try {
       await login(email, password)
       navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Login failed. Please try again.')
+      const msg = err.response?.data?.detail || err.message || ''
+      if (!msg || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('socket')) {
+        setError('Could not reach the server. It may still be waking up — please try again in a moment.')
+      } else {
+        setError(msg || 'Login failed. Please try again.')
+      }
     } finally {
+      clearTimeout(wakeTimer)
       setLoading(false)
+      setWaking(false)
     }
+  }
+
+  const buttonLabel = () => {
+    if (!loading) return 'Sign In'
+    if (waking) return 'Server waking up...'
+    return 'Signing in...'
   }
 
   return (
@@ -79,6 +98,13 @@ export default function Login() {
             </div>
           </div>
 
+          {/* Cold-start hint */}
+          {waking && !error && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs px-4 py-2.5 rounded-lg">
+              The server is starting up (free hosting tier). This can take up to 60 seconds on the first request — please wait.
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg">
               {error}
@@ -90,7 +116,7 @@ export default function Login() {
             disabled={loading}
             className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-50"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {buttonLabel()}
           </button>
         </form>
 
