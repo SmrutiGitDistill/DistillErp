@@ -87,6 +87,7 @@ export default function Layout({ children }) {
         zIndex: 50,
         transition: 'left 0.25s ease',
         boxShadow: mobileOverlay ? '4px 0 24px rgba(0,0,0,0.35)' : 'none',
+        overflow: 'hidden',
       }}>
 
         {/* Brand header */}
@@ -122,7 +123,7 @@ export default function Layout({ children }) {
         </div>
 
         {/* Navigation */}
-        <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
+        <nav style={{ flex: 1, minHeight: 0, padding: '10px 8px', overflowY: 'auto' }}>
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
