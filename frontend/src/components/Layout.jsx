@@ -121,37 +121,8 @@ export default function Layout({ children }) {
             </button>
           )}
         </div>
-
-        {/* Navigation */}
-        <nav style={{ flex: 1, minHeight: 0, padding: '10px 8px', overflowY: 'auto' }}>
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={handleNavClick}
-              style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                marginBottom: '2px',
-                fontSize: '13px',
-                fontWeight: '500',
-                textDecoration: 'none',
-                backgroundColor: isActive ? '#C8760A' : 'transparent',
-                color: isActive ? 'white' : '#A8A29E',
-                transition: 'background-color 0.15s, color 0.15s',
-              })}
-            >
-              <Icon size={17} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
         {/* User info + logout */}
-        <div style={{ borderTop: '1px solid #292524', padding: '12px' }}>
+        <div style={{ borderBottom: '1px solid #292524', padding: '12px' }}>
           <div style={{ padding: '6px 8px 10px' }}>
             <p style={{ color: 'white', fontSize: '12px', fontWeight: '600', lineHeight: 1.3 }}>
               {user?.full_name}
@@ -190,6 +161,34 @@ export default function Layout({ children }) {
             <span>Logout</span>
           </button>
         </div>
+
+        {/* Navigation */}
+        <nav style={{ flex: 1, minHeight: 0, padding: '10px 8px', overflowY: 'auto' }}>
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={handleNavClick}
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                marginBottom: '2px',
+                fontSize: '13px',
+                fontWeight: '500',
+                textDecoration: 'none',
+                backgroundColor: isActive ? '#C8760A' : 'transparent',
+                color: isActive ? 'white' : '#A8A29E',
+                transition: 'background-color 0.15s, color 0.15s',
+              })}
+            >
+              <Icon size={17} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
       </aside>
 
       {/* Main column — shifts right to make room for the persistent sidebar on desktop */}
