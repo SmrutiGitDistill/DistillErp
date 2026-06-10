@@ -1,6 +1,6 @@
 # Render Backend Deployment
 
-This file is for testing only on Render's free tier. The app will run as a native Python web service from the `backend/` directory and use a free Render Postgres database.
+This file is for testing on Render's free tier. The app will run as a native Python web service from the `backend/` directory and connect to an external PostgreSQL database (such as a free Neon DB database).
 
 ## Blueprint Deploy
 
@@ -13,9 +13,8 @@ This file is for testing only on Render's free tier. The app will run as a nativ
 The blueprint creates:
 
 - `distillerp-backend`: free Python web service
-- `distillerp-db`: free Render Postgres database
 
-Render will set `DATABASE_URL`, generate `SECRET_KEY`, run `pip install -r requirements.txt`, and start the API with:
+During blueprint creation, Render will prompt you for the `DATABASE_URL` (where you should paste your Neon database connection string). Render will generate `SECRET_KEY`, run `pip install -r requirements.txt`, and start the API with:
 
 ```bash
 python render_start.py && uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
@@ -38,7 +37,7 @@ Set these environment variables:
 
 ```text
 PYTHON_VERSION=3.11.11
-DATABASE_URL=<your Render Postgres connection string>
+DATABASE_URL=<your Neon/PostgreSQL connection string>
 SECRET_KEY=<long random secret>
 ENVIRONMENT=production
 ALLOWED_ORIGINS=https://distillerp.vercel.app,http://localhost:5173,http://127.0.0.1:5173
@@ -52,7 +51,7 @@ INITIAL_SUPERADMIN_NAME=Test Super Admin
 
 - Free web services spin down after 15 minutes without traffic and take about a minute to wake up.
 - Free web service files are ephemeral, so local JSON backups in `/tmp` are only for short tests.
-- Free Render Postgres databases expire after 30 days.
+- By using an external database like Neon DB, you avoid the 30-day expiration limit of Render's free Postgres database.
 - `RENDER_EXTERNAL_URL` is automatically added to CORS origins by the backend.
 - The deployed Vercel frontend, `https://distillerp.vercel.app`, must be present in the backend service's `ALLOWED_ORIGINS`.
 - If testing from the local React frontend, keep `http://localhost:5173` in `ALLOWED_ORIGINS`.
